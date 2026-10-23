@@ -42,7 +42,9 @@
 
       <nav id="navmenu" class="navmenu">
         <ul>
-          <li><a href="#hero" class="active">INICIO<br></a></li> 
+          <li><a href="#hero" class="active">INICIO<br></a></li>
+          <li><a href="#catalogo">CATÁLOGO</a></li>
+          <li><a href="#modelo">MODELOS</a></li>
         </ul>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
@@ -66,6 +68,9 @@
             <h2>INDUSTRIAS<span>.</span></h2>
             <p>KEER</p>
           </div>
+        </div>
+
+      </div>
 
     </section><!-- /Hero Section -->
 
@@ -224,6 +229,54 @@
 
     </section><!-- /About Section -->
 
+    <!-- Catálogo PDF -->
+    <section id="catalogo" class="catalogo section">
+
+      <div class="container" data-aos="fade-up" data-aos-delay="100">
+        <h2 class="catalogo-titulo">Conoce nuestro catálogo</h2>
+
+        <div class="visor-pdf" data-pdf="catalogo.pdf">
+          <div class="visor-barra">
+            <button class="pdf-anterior" type="button" aria-label="Página anterior">&uarr;</button>
+            <button class="pdf-siguiente" type="button" aria-label="Página siguiente">&darr;</button>
+            <span>Página <span class="pdf-pag-actual">1</span> / <span class="pdf-pag-total">-</span></span>
+            <button class="pdf-zoom-menos" type="button" aria-label="Alejar">&minus;</button>
+            <button class="pdf-zoom-mas" type="button" aria-label="Acercar">+</button>
+            <span>Zoom <span class="pdf-zoom-valor">100</span>%</span>
+          </div>
+          <div class="visor-area">
+            <div class="visor-estado">Cargando...</div>
+            <canvas class="pdf-lienzo" oncontextmenu="return false;"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </section><!-- /Catálogo PDF -->
+
+    <!-- Modelos PDF -->
+    <section id="modelo" class="catalogo section">
+
+      <div class="container" data-aos="fade-up" data-aos-delay="100">
+        <h2 class="catalogo-titulo">Conoce nuestros modelos financieros</h2>
+
+        <div class="visor-pdf" data-pdf="modelo.pdf">
+          <div class="visor-barra">
+            <button class="pdf-anterior" type="button" aria-label="Página anterior">&uarr;</button>
+            <button class="pdf-siguiente" type="button" aria-label="Página siguiente">&darr;</button>
+            <span>Página <span class="pdf-pag-actual">1</span> / <span class="pdf-pag-total">-</span></span>
+            <button class="pdf-zoom-menos" type="button" aria-label="Alejar">&minus;</button>
+            <button class="pdf-zoom-mas" type="button" aria-label="Acercar">+</button>
+            <span>Zoom <span class="pdf-zoom-valor">100</span>%</span>
+          </div>
+          <div class="visor-area">
+            <div class="visor-estado">Cargando...</div>
+            <canvas class="pdf-lienzo" oncontextmenu="return false;"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </section><!-- /Modelos PDF -->
+
     <!-- Productos -->
     
 
@@ -258,6 +311,94 @@
   <script src="assets/vendor/imagesloaded/imagesloaded.pkgd.min.js"></script>
   <script src="assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
   <script src="assets/vendor/purecounter/purecounter_vanilla.js"></script>
+
+  <!-- Visor PDF (PDF.js) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    // Inicia un visor por cada elemento .visor-pdf (usa su atributo data-pdf)
+    document.querySelectorAll(".visor-pdf").forEach(function (visor) {
+      var urlPdf = visor.getAttribute("data-pdf");
+      var pdfDoc = null, paginaNum = 1, zoom = 1, renderizando = false, pendiente = false;
+
+      var area = visor.querySelector(".visor-area");
+      var lienzo = visor.querySelector(".pdf-lienzo");
+      var ctx = lienzo.getContext("2d");
+      var estado = visor.querySelector(".visor-estado");
+      var btnAnt = visor.querySelector(".pdf-anterior");
+      var btnSig = visor.querySelector(".pdf-siguiente");
+
+      function actualizarBotones() {
+        btnAnt.disabled = paginaNum <= 1;
+        btnSig.disabled = !pdfDoc || paginaNum >= pdfDoc.numPages;
+        visor.querySelector(".pdf-pag-actual").textContent = paginaNum;
+        visor.querySelector(".pdf-zoom-valor").textContent = Math.round(zoom * 100);
+      }
+
+      function mostrarPagina() {
+        renderizando = true;
+        pdfDoc.getPage(paginaNum).then(function (pagina) {
+          var anchoBase = area.clientWidth - 20;
+          var vistaBase = pagina.getViewport({ scale: 1 });
+          var escala = (anchoBase / vistaBase.width) * zoom;
+          var vista = pagina.getViewport({ scale: escala });
+
+          var dpr = window.devicePixelRatio || 1;
+          lienzo.width = vista.width * dpr;
+          lienzo.height = vista.height * dpr;
+          lienzo.style.width = vista.width + "px";
+          lienzo.style.height = vista.height + "px";
+
+          return pagina.render({
+            canvasContext: ctx,
+            viewport: vista,
+            transform: [dpr, 0, 0, dpr, 0, 0]
+          }).promise;
+        }).then(function () {
+          renderizando = false;
+          if (pendiente) { pendiente = false; mostrarPagina(); }
+        });
+        actualizarBotones();
+      }
+
+      function pedirPagina() {
+        if (renderizando) { pendiente = true; } else { mostrarPagina(); }
+      }
+
+      btnAnt.onclick = function () {
+        if (paginaNum <= 1) return;
+        paginaNum--; area.scrollTop = 0; pedirPagina();
+      };
+      btnSig.onclick = function () {
+        if (paginaNum >= pdfDoc.numPages) return;
+        paginaNum++; area.scrollTop = 0; pedirPagina();
+      };
+      visor.querySelector(".pdf-zoom-mas").onclick = function () {
+        zoom = Math.min(zoom + 0.25, 4); pedirPagina();
+      };
+      visor.querySelector(".pdf-zoom-menos").onclick = function () {
+        zoom = Math.max(zoom - 0.25, 0.5); pedirPagina();
+      };
+
+      var temporizador;
+      window.addEventListener("resize", function () {
+        if (!pdfDoc) return;
+        clearTimeout(temporizador);
+        temporizador = setTimeout(pedirPagina, 200);
+      });
+
+      pdfjsLib.getDocument(urlPdf).promise.then(function (doc) {
+        pdfDoc = doc;
+        estado.style.display = "none";
+        visor.querySelector(".pdf-pag-total").textContent = doc.numPages;
+        mostrarPagina();
+      }).catch(function () {
+        estado.textContent = "No se pudo cargar " + urlPdf + ". Verifica que esté en la misma carpeta que index.html.";
+      });
+    });
+  </script>
 
   <!-- Main JS File -->
   <script src="assets/js/main.js"></script>
